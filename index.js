@@ -58,15 +58,30 @@ async function run() {
 
     // CRUD for Projects
     app.post("/api/v1/projects", async (req, res) => {
-      const newProject = req.body;
-      await projectsCollection.insertOne(newProject);
-      res.status(201).json({ message: "Project added successfully!" });
+      try {
+        const newProject = req.body;
+        const result = await projectsCollection.insertOne(newProject);
+    
+        if (!result.insertedId) {
+          return res.status(500).json({ message: "Failed to add project!" });
+        }
+    
+        res.status(201).json({ message: "Project added successfully!", id: result.insertedId });
+      } catch (error) {
+        console.error("Error adding project:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+      }
     });
-
     app.get("/api/v1/projects", async (req, res) => {
-      const projects = await projectsCollection.find().toArray();
-      res.json(projects);
+      try {
+        const projects = await projectsCollection.find().toArray();
+        res.json(projects);
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+      }
     });
+    
 
     app.delete("/api/v1/projects/:id", async (req, res) => {
       const { id } = req.params;
