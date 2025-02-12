@@ -44,22 +44,50 @@ async function run() {
       await blogsCollection.insertOne(newBlog);
       res.status(201).json({ message: "Blog created successfully!" });
     });
-
+    
     app.get("/api/v1/blogs", async (req, res) => {
       const blogs = await blogsCollection.find().toArray();
       res.json(blogs);
     });
-
+    
+    app.patch("/api/v1/blogs/:id", async (req, res) => {
+      const { id } = req.params;
+      const updatedBlog = req.body;
+    
+      try {
+        const result = await blogsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updatedBlog }
+        );
+    
+        if (result.modifiedCount === 0) {
+          return res.status(404).json({ message: "Blog not found or no changes made." });
+        }
+    
+        res.json({ message: "Blog updated successfully!" });
+      } catch (error) {
+        console.error("Error updating blog:", error);
+        res.status(500).json({ message: "Internal server error." });
+      }
+    });
+    
     app.delete("/api/v1/blogs/:id", async (req, res) => {
       const { id } = req.params;
       await blogsCollection.deleteOne({ _id: new ObjectId(id) });
       res.json({ message: "Blog deleted successfully!" });
-    });
+    });    
 
     // CRUD for Projects
     app.post("/api/v1/projects", async (req, res) => {
       try {
-        const newProject = req.body;
+        const { title, image, liveLink, clientCode, serverCode, technologies, description, features } = req.body;
+    
+        if (!title || !image || !clientCode || !serverCode || !technologies || !description || !features) {
+          return res.status(400).json({ message: "All fields are required!" });
+        }
+    
+        const newProject = { title, image, liveLink, clientCode, serverCode, technologies, description, features };
+    
         const result = await projectsCollection.insertOne(newProject);
     
         if (!result.insertedId) {
@@ -71,7 +99,8 @@ async function run() {
         console.error("Error adding project:", error);
         res.status(500).json({ message: "Internal Server Error" });
       }
-    });
+    });    
+
     app.get("/api/v1/projects", async (req, res) => {
       try {
         const projects = await projectsCollection.find().toArray();
@@ -84,10 +113,50 @@ async function run() {
     
 
     app.delete("/api/v1/projects/:id", async (req, res) => {
-      const { id } = req.params;
-      await projectsCollection.deleteOne({ _id: new ObjectId(id) });
-      res.json({ message: "Project deleted successfully!" });
-    });
+  try {
+    const { id } = req.params;
+    const result = await projectsCollection.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Project not found!" });
+    }
+
+    res.json({ message: "Project deleted successfully!" });
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+const { ObjectId } = require("mongodb");
+
+app.patch("/api/v1/projects/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, image, clientCode, serverCode, technologies, description, features } = req.body;
+
+    if (!title && !image && !clientCode && !serverCode && !technologies && !description && !features) {
+      return res.status(400).json({ message: "At least one field is required to update!" });
+    }
+
+    const updatedProject = { title, image, clientCode, serverCode, technologies, description, features };
+
+    const result = await projectsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updatedProject }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "Project not found or no changes made." });
+    }
+
+    res.json({ message: "Project updated successfully!" });
+  } catch (error) {
+    console.error("Error updating project:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 
     // Contact Messages
     app.post("/api/v1/messages", async (req, res) => {
